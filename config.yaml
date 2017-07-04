@@ -1,3 +1,12 @@
 db:
   dialect: mysql
   dsn: "root:assembler1729@tcp(localhost:6603)/rpc"
+
+net:
+    tcp:
+      host: localhost
+      port: 3000
+
+    http:
+      host: localhost
+      port: 4000

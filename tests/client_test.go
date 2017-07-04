@@ -1,23 +1,23 @@
 package tests
 
 import (
-	"net/rpc"
 	"net"
-	"log"
 	"net/rpc/jsonrpc"
-	"github.com/antipin1987@gmail.com/rpcj/db"
-	"github.com/antipin1987@gmail.com/rpcj/models"
 	"testing"
 	"fmt"
 	"time"
+	"github.com/antipin1987@gmail.com/rpcj/config"
+	"github.com/antipin1987@gmail.com/rpcj/server"
 )
 
 
 func Test(t *testing.T) {
-	go startServer()
+	conf := config.Get().Sub("net.tcp")
+	addr := fmt.Sprintf("%s:%s", conf.GetString("host"), conf.GetString("port"))
+	go server.StartServerTCP(addr)
 	var rep bool
 	time.Sleep(3 * time.Second)
-	client, err := net.Dial("tcp", "127.0.0.1:3000")
+	client, err := net.Dial("tcp", addr)
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,23 +31,4 @@ func Test(t *testing.T) {
 	fmt.Println("Success: ", rep)
 }
 
-func startServer() {
-	defer db.Close()
-	server := rpc.NewServer()
-	for name, model := range models.Registry() {
-		server.RegisterName(name, model)
-	}
-	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
-	listener, e := net.Listen("tcp", ":3000")
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	for {
-		if conn, err := listener.Accept(); err != nil {
-			log.Fatal("accept error: " + err.Error())
-		} else {
-			log.Printf("new connection established\n")
-			go server.ServeCodec(jsonrpc.NewServerCodec(conn))
-		}
-	}
-}
+
