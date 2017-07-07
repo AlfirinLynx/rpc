@@ -12,11 +12,13 @@ import (
 
 var AddrTCP, AddrHTTP string
 
+//Структура-адаптер, позволяющая обрабатывать http-запросы серверу из пакета rpc/jsonrpc
 type HttpConn struct {
-	in  io.Reader
-	out io.Writer
+	in  io.Reader   //сервер читает запрос отсюда
+	out io.Writer	// и отвечает сюда
 }
 
+// Имплементировать ReadWriteCloser
 func (c *HttpConn) Read(p []byte) (n int, err error)  { return c.in.Read(p) }
 func (c *HttpConn) Write(d []byte) (n int, err error) { return c.out.Write(d) }
 func (c *HttpConn) Close() error                      { return nil }
@@ -39,15 +41,6 @@ func (s *Serv) HttpHandler(w http.ResponseWriter, r *http.Request) {
 
 
 
-
-
-
-
-func Copy(dst io.Writer, src io.Reader) {
-	if _, err := io.Copy(dst, src); err != nil {
-		log.Fatal(err)
-	}
-}
 
 
 
