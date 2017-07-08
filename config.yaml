@@ -1,6 +1,6 @@
 db:
   dialect: mysql
-  dsn: "root:assembler1729@tcp(localhost:6603)/rpc?parseTime=true"
+  dsn: "root:mypwd@tcp(localhost:6603)/rpc?parseTime=true"
 
 net:
     tcp:

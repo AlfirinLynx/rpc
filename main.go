@@ -9,6 +9,9 @@ import (
 )
 
 
+//json-rpc сервер, слушающий на двух портах: один - на чистом tcp, другой - по http
+//порты прописаны в конфиге (см. файл config.yaml)
+
 func main() {
 	defer db.Close()
 

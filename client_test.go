@@ -38,20 +38,21 @@ func init() {
 
 func countRecords(f *models.Filter) int {
 	var count int
-	q :=  db.DB().Model(&orm.User{})
-	if !f.Date.IsZero(){
-		q = q.Where("registration_date = DATE(?)", f.Date.String())
-	}
-	if f.UUId != "" {
-		q = q.Where("uuid = ?", f.UUId)
-	}
-	if f.Login != "" {
-		q = q.Where("login = ?", f.Login)
+	q, err := f.GetQuery()
+	if err != nil {
+		panic(err)
 	}
 	q.Count(&count)
 	return count
 }
 
+func dateByTime(t time.Time) string {
+	y, m, d := t.Date()
+	return fmt.Sprintf("%04d-%02d-%02d", y, m, d)
+}
+
+
+//Тест добавления пользователя с данным логином
 func TestAddUser(t *testing.T) {
 	var (
 		rep bool //ответ - успех/неуспех (true/false) выполнения метода
@@ -80,16 +81,21 @@ func TestAddUser(t *testing.T) {
 	assert.True(t, countAfter - countBefore == 1)
 }
 
-
+//Тест поиска пользователей по фильтру
 func TestUserFind(t *testing.T) {
 	var (
-		login = "Cat"
-		f = &models.Filter{Login: login, Date: time.Now().UTC()}  // Фильтр для поиска (логин "Cat", создан сегодня)
-		// В локальной БД время в UTC, а Now() возвращает MSK, так что около полуночи может быть расхождение в дате, если не использовать метод UTC()
+		login = "Cat5"
+		date = dateByTime(time.Now()) // Извлекаем сегодняшнюю дату
+		f = &models.Filter{Login: login, Date: date}  // Фильтр для поиска (логин "Cat5", создан сегодня)
 		usrs = make([]orm.User, 0)  // для результата поиска
 	)
 	//Создадим запись в БД
-	if err := db.DB().Create(&orm.User{Login: login}).Error; err != nil {
+	u, err := f.ToORM()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if err := db.DB().Create(u).Error; err != nil {
 		t.Error(err)
 		return
 	}
@@ -99,7 +105,7 @@ func TestUserFind(t *testing.T) {
 	fmt.Println("Records in db before call to User.Find: ", count)
 
 	//Теперь ищем запись (логин "Cat", создан сегодня), отправляя запрос по чистому TCP на json-RPC сервер
-	err := c.Call("User.Find", f, &usrs)
+	err = c.Call("User.Find", f, &usrs)
 	if err != nil {
 		t.Error("User.Find error: ", err)
 		return
@@ -112,16 +118,17 @@ func TestUserFind(t *testing.T) {
 	assert.True(t, count == len(usrs))
 }
 
-
+//Тест удаления пользователей по фильтру
 func  TestUserDelete(t *testing.T) {
 	var (
 		rep string // Для строки с ожидаемым результатом - "... records deleted"
 		login = "trash"
 		f = &models.Filter{Login: login} //фильтр
 	)
+
 	//Создадим 3 записи с одинаковым логином
 	for i := 0; i < 3; i++ {
-		if err := db.DB().Create(f.ToORM()).Error; err != nil {
+		if err := db.DB().Create(&orm.User{Login: login}).Error; err != nil {
 			t.Error(err)
 			return
 		}
@@ -144,6 +151,8 @@ func  TestUserDelete(t *testing.T) {
 
 
 //Тест http-сервера
+//Отправляем запросы, в теле которых json вида: {"method":"User.Find","params":[{"Date":"2017-07-08", "login":"Cat7"}],"id":0},
+// {"method":"User.Add","params":["Dog172967"],"id":0}, {"method":"User.Delete","params":[{"uuid":"","login":"Dog172967"}],"id":0} и т. д.
 
 func TestHttp(t *testing.T)  {
 	//Слушаем http-запросы
@@ -182,3 +191,4 @@ func TestHttp(t *testing.T)  {
 	}
 	assert.True(t, r)
 }
+

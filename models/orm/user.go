@@ -23,3 +23,4 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	}
 	return nil
 }
+
